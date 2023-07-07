@@ -67,12 +67,13 @@ class ModelMeanType(enum.Enum):
     Which type of output the model predicts.
     """
 
-    PREVIOUS_X = enum.auto()  # the model predicts x_{t-1}
-    START_X = enum.auto()  # the model predicts x_0
+    # PREVIOUS_X = enum.auto()  # the model predicts x_{t-1}
+    # START_X = enum.auto()  # the model predicts x_0
     EPSILON = enum.auto()  # the model predicts epsilon
 
 
 class ModelVarType(enum.Enum):
+
     """
     What is used as the model's output variance.
 
@@ -80,9 +81,9 @@ class ModelVarType(enum.Enum):
     values between FIXED_SMALL and FIXED_LARGE, making its job easier.
     """
 
-  #  LEARNED = enum.auto()
-   # FIXED_SMALL = enum.auto()
-   # FIXED_LARGE = enum.auto()
+    # LEARNED = enum.auto()
+    # FIXED_SMALL = enum.auto()
+    # FIXED_LARGE = enum.auto()
     LEARNED_RANGE = enum.auto()
 
 
@@ -261,36 +262,36 @@ class GaussianDiffusion:
         assert t.shape == (B,)
         model_output = model(x, self._scale_timesteps(t), **model_kwargs)
 
-        if self.model_var_type in [ModelVarType.LEARNED, ModelVarType.LEARNED_RANGE]:
+        if self.model_var_type == ModelVarType.LEARNED_RANGE:
             assert model_output.shape == (B, C * 2, *x.shape[2:])
             model_output, model_var_values = th.split(model_output, C, dim=1)
-            if self.model_var_type == ModelVarType.LEARNED:
-                model_log_variance = model_var_values
-                model_variance = th.exp(model_log_variance)
-            else:
-                min_log = _extract_into_tensor(
-                    self.posterior_log_variance_clipped, t, x.shape
-                )
-                max_log = _extract_into_tensor(np.log(self.betas), t, x.shape)
-                # The model_var_values is [-1, 1] for [min_var, max_var].
-                frac = (model_var_values + 1) / 2
-                model_log_variance = frac * max_log + (1 - frac) * min_log
-                model_variance = th.exp(model_log_variance)
-        else:
-            model_variance, model_log_variance = {
-                # for fixedlarge, we set the initial (log-)variance like so
-                # to get a better decoder log likelihood.
-                ModelVarType.FIXED_LARGE: (
-                    np.append(self.posterior_variance[1], self.betas[1:]),
-                    np.log(np.append(self.posterior_variance[1], self.betas[1:])),
-                ),
-                ModelVarType.FIXED_SMALL: (
-                    self.posterior_variance,
-                    self.posterior_log_variance_clipped,
-                ),
-            }[self.model_var_type]
-            model_variance = _extract_into_tensor(model_variance, t, x.shape)
-            model_log_variance = _extract_into_tensor(model_log_variance, t, x.shape)
+            # if self.model_var_type == ModelVarType.LEARNED:
+            #     model_log_variance = model_var_values
+            #     model_variance = th.exp(model_log_variance)
+            # else:
+            min_log = _extract_into_tensor(
+                self.posterior_log_variance_clipped, t, x.shape
+            )
+            max_log = _extract_into_tensor(np.log(self.betas), t, x.shape)
+            # The model_var_values is [-1, 1] for [min_var, max_var].
+            frac = (model_var_values + 1) / 2
+            model_log_variance = frac * max_log + (1 - frac) * min_log
+            model_variance = th.exp(model_log_variance)
+        # else:
+        #     model_variance, model_log_variance = {
+        #         # for fixedlarge, we set the initial (log-)variance like so
+        #         # to get a better decoder log likelihood.
+        #         ModelVarType.FIXED_LARGE: (
+        #             np.append(self.posterior_variance[1], self.betas[1:]),
+        #             np.log(np.append(self.posterior_variance[1], self.betas[1:])),
+        #         ),
+        #         ModelVarType.FIXED_SMALL: (
+        #             self.posterior_variance,
+        #             self.posterior_log_variance_clipped,
+        #         ),
+        #     }[self.model_var_type]
+        #     model_variance = _extract_into_tensor(model_variance, t, x.shape)
+        #     model_log_variance = _extract_into_tensor(model_log_variance, t, x.shape)
 
         def process_xstart(x):
             if denoised_fn is not None:
@@ -299,21 +300,18 @@ class GaussianDiffusion:
                 return x.clamp(-1, 1)
             return x
 
-        if self.model_mean_type == ModelMeanType.PREVIOUS_X:
+        # if self.model_mean_type == ModelMeanType.PREVIOUS_X:
+        #     pred_xstart = process_xstart(
+        #         self._predict_xstart_from_xprev(x_t=x, t=t, xprev=model_output)
+        #     )
+        #     model_mean = model_output
+        if self.model_mean_type == ModelMeanType.EPSILON :
+            # if self.model_mean_type == ModelMeanType.START_X:
+            #     pred_xstart = process_xstart(model_output)
             pred_xstart = process_xstart(
-                self._predict_xstart_from_xprev(x_t=x, t=t, xprev=model_output)
-            )
-            model_mean = model_output
-        elif self.model_mean_type in [ModelMeanType.START_X, ModelMeanType.EPSILON]:
-            if self.model_mean_type == ModelMeanType.START_X:
-                pred_xstart = process_xstart(model_output)
-            else:
-                pred_xstart = process_xstart(
-                    self._predict_xstart_from_eps(x_t=x, t=t, eps=model_output)
-                )
+                self._predict_xstart_from_eps(x_t=x, t=t, eps=model_output))
             model_mean, _, _ = self.q_posterior_mean_variance(
-                x_start=pred_xstart, x_t=x, t=t
-            )
+                x_start=pred_xstart, x_t=x, t=t)
         else:
             raise NotImplementedError(self.model_mean_type)
 
