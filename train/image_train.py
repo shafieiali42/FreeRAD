@@ -1,10 +1,23 @@
 from model.Unet import SuperResModel, UNetModel
 from model import gaussian_diffusion as gd
-
-
+from dataset.load_dataset import get_train_dataset, get_dataLoader
+from train_util import TrainLoop
 
 
 def main():
+    BATCH_SIZE=128
+    MICROBATCH_SIZE=2
+    lr=0.0001
+    ema_rate=0.9999
+    schedule_sampler = None
+    log_interval=10
+    save_interval=10000
+    use_fp16=False
+    fp16_scale_growth=0.001
+    weight_decay=0.0
+    lr_anneal_steps=0
+    resume_checkpoint=""
+
     unet=create_Unet_model(
         image_size=64,
         num_channels=128,
@@ -31,13 +44,32 @@ def main():
         rescale_learned_sigmas=True,
         timestep_respacing=False,)
     
-    schedule_sampler = None
-    data = load_data(
-        data_dir=args.data_dir,
-        batch_size=args.batch_size,
-        image_size=args.image_size,
-        class_cond=args.class_cond,
-    )
+    train_dataset=get_train_dataset("carpet/train/good/",64)
+    train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
+
+    TrainLoop(
+        unet=unet,
+        diffusion=diffusion,
+        data=train_data_loader,
+        batch_size=BATCH_SIZE,
+        microbatch=MICROBATCH_SIZE,
+        lr=lr,
+        ema_rate=ema_rate,
+        log_interval=log_interval,
+        save_interval=save_interval,
+        resume_checkpoint=resume_checkpoint,
+        use_fp16=use_fp16,
+        fp16_scale_growth=fp16_scale_growth,
+        schedule_sampler=schedule_sampler,
+        weight_decay=weight_decay,
+        lr_anneal_steps=lr_anneal_steps,
+    ).run_loop()
+
+
+
+
+
+
 
 
     

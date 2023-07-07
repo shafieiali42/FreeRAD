@@ -51,4 +51,9 @@ def get_train_dataset(path,image_size):
     dataset = ImageDataset(carpet_image_paths,my_carpet_transforms)
     return dataset
 
+
+def get_dataLoader(dataset,batch_size,shuffle):
+   data_loader=DataLoader(dataset=dataset,batch_size=batch_size,shuffle=shuffle)
+   return data_loader
+
 carpet_train_dataset=get_train_dataset("carpet/train/good/")
