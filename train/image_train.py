@@ -136,7 +136,7 @@ def main():
     # plt.imsave("image.jpg",transforms.ToPILImage()(a*255))
     # exit(0)
     train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
-
+    unet=unet.to(device=device)
     TrainLoop(
         unet=unet,
         diffusion=diffusion,

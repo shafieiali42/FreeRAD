@@ -49,5 +49,7 @@ class TrainLoop:
                 loss = (losses["loss"] * weights).mean() ## todo
                 loss.backward()
                 print(losses)
+                print("-"*500)
+                print(loss)
                 self.optimizer.step()
                 ema.step_ema(ema_model, self.unet)
