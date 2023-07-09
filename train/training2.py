@@ -5,6 +5,7 @@ import numpy as np
 import torch as th
 import torch.distributed as dist
 from torch.optim import AdamW
+from model.ema import EMA
 
 from model.fp16_util import (
     make_master_params,
@@ -40,6 +41,8 @@ class TrainLoop:
         self.ema_rate=ema_rate
         self.device=device
         self.weight_decay=weight_decay
+        ema = EMA(0.995)
+        ema_model = copy.deepcopy(self.unet).eval().requires_grad_(False)
         self.optimizer = AdamW(self.unet.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         for epoch in range(EPOCHS):
             for batch in tqdm(train_dataLoader):
@@ -52,8 +55,6 @@ class TrainLoop:
                 weights = th.from_numpy(weights).float().to(device)
                 loss = (losses["loss"] * weights).mean() ## todo
                 loss.backward()
+                print(losses)
                 self.optimizer.step()
-      
-                
-
-            
+                ema.step_ema(ema_model, self.unet)
