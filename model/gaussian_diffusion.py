@@ -556,10 +556,6 @@ class GaussianDiffusion:
         terms["vb"] *= self.num_timesteps / 1000.0
 
         target = {
-                ModelMeanType.PREVIOUS_X: self.q_posterior_mean_variance(
-                    x_start=x_start, x_t=x_t, t=t
-                )[0],
-                ModelMeanType.START_X: x_start,
                 ModelMeanType.EPSILON: noise,
         }[self.model_mean_type]
         assert model_output.shape == target.shape == x_start.shape
