@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 
-EPOCHS=20
+EPOCHS=100
 class TrainLoop:
     def __init__(
         self,
