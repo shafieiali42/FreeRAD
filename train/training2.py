@@ -53,9 +53,9 @@ class TrainLoop:
                 weights = th.from_numpy(weights).float().to(self.device)
                 loss = (losses["loss"] * weights).mean() ## todo
                 loss.backward()
-                print(losses)
-                print("-"*500)
+                # print(losses)
                 print(loss)
+                print("-"*500)
                 self.optimizer.step()
                 self.ema.step_ema(self.ema_model, self.unet)
             th.save({'epoch': epoch,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
