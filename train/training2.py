@@ -42,6 +42,7 @@ class TrainLoop:
                 batch=batch.to(device)
                 self.optimizer.zero_grad()
                 t=np.random.uniform(0,self.diffusion.num_timesteps,size=(self.batch_size,))
+                t = th.from_numpy(t).long().to(device)
                 losses=self.diffusion.training_losses(self.unet,batch,t)
                 weights=np.ones([self.batch_size])
                 weights = th.from_numpy(weights).float().to(device)
