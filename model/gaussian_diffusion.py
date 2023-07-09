@@ -566,8 +566,6 @@ class GaussianDiffusion:
         terms["mse"] = mean_flat((target - model_output) ** 2)
         if "vb" in terms:
             terms["loss"] = terms["mse"] + terms["vb"]
-
-
         return terms
 
     def _prior_bpd(self, x_start):

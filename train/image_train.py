@@ -83,11 +83,10 @@ def create_Unet_model(
 
 
 def main():
-    BATCH_SIZE=128
+    BATCH_SIZE=2
     MICROBATCH_SIZE=2
     lr=0.0001
     ema_rate=0.9999
-    schedule_sampler = None
     log_interval=10
     save_interval=10000
     use_fp16=False
@@ -144,6 +143,7 @@ def main():
         batch_size=BATCH_SIZE,
         lr=lr,
         ema_rate=ema_rate,
+        num_epochs=100,
         device=device,
         weight_decay=weight_decay,
     ).run_loop()
