@@ -144,6 +144,7 @@ def main():
         lr=lr,
         ema_rate=ema_rate,
         num_epochs=100,
+        base_model_path="None",
         device=device,
         weight_decay=weight_decay,
     ).run_loop()
