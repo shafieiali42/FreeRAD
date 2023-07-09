@@ -6,14 +6,6 @@ import torch as th
 import torch.distributed as dist
 from torch.optim import AdamW
 from model.ema import EMA
-
-from model.fp16_util import (
-    make_master_params,
-    master_params_to_model_params,
-    model_grads_to_master_grads,
-    unflatten_master_params,
-    zero_grad,
-)
 from model.nn import update_ema
 from tqdm import tqdm
 

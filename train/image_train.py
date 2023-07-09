@@ -1,7 +1,14 @@
+import sys
+import os
+cwd = os.getcwd()
+sys.path.insert(0,cwd)
+
 from model.Unet import UNetModel
 from model import gaussian_diffusion as gd
 from dataset.load_dataset import get_train_dataset, get_dataLoader
 from training2 import TrainLoop
+import torch
+import matplotlib.pyplot as plt
 
 
 
@@ -89,6 +96,8 @@ def main():
     lr_anneal_steps=0
     resume_checkpoint=""
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
     unet=create_Unet_model(
         image_size=64,
         num_channels=128,
@@ -105,7 +114,7 @@ def main():
 
     )
     diffusion=create_gaussian_diffusion(
-        steps=1,
+        steps=1000,
         learn_sigma=True,
         sigma_small=False,
         noise_schedule="linear",
@@ -115,25 +124,28 @@ def main():
         rescale_learned_sigmas=True,
         timestep_respacing=False,)
     
-    train_dataset=get_train_dataset("carpet/train/good/",64)
+    train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",64)
+    # print(train_dataset.__getitem__(0))
+    # from torchvision import datasets, transforms, models
+    # a=train_dataset.__getitem__(0)
+    # print(a.max())
+    # print(a.min())
+    # b=(a+1)*127.5
+    # print(b.max())
+    # print(b.min())
+    # plt.imsave("image.jpg",transforms.ToPILImage()(a*255))
+    # exit(0)
     train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
 
     TrainLoop(
         unet=unet,
         diffusion=diffusion,
-        data=train_data_loader,
+        train_dataLoader=train_data_loader,
         batch_size=BATCH_SIZE,
-        microbatch=MICROBATCH_SIZE,
         lr=lr,
         ema_rate=ema_rate,
-        log_interval=log_interval,
-        save_interval=save_interval,
-        resume_checkpoint=resume_checkpoint,
-        use_fp16=use_fp16,
-        fp16_scale_growth=fp16_scale_growth,
-        schedule_sampler=schedule_sampler,
+        device=device,
         weight_decay=weight_decay,
-        lr_anneal_steps=lr_anneal_steps,
     ).run_loop()
 
 

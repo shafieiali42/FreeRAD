@@ -10,14 +10,17 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms, models
 from torch.utils.data import Dataset, DataLoader
-
+from PIL import Image
 
 class normalizeImage:
   def __call__(self,sample):
-    sample=torch.numpy()
+    sample=sample.numpy()
     sample=sample.astype("float64")
-    sample=sample/127.5
-    sample=sample-1
+    # sample=sample/127.5
+    # sample=sample-1
+    sample=sample/255
+    # sample=sample-1
+    
     sample=torch.from_numpy(sample)
     return sample
 
@@ -29,7 +32,8 @@ class ImageDataset(Dataset):
       self.transform=transform
 
     def __getitem__(self, index):
-      image=cv2.imread(self.image_paths[index])
+      # image=cv2.imread(self.image_paths[index])
+      image=Image.open(self.image_paths[index])
       if self.transform is not None:
         image=self.transform(image)
       return image
@@ -41,14 +45,14 @@ class ImageDataset(Dataset):
 
 def get_train_dataset(path,image_size):
     entries = os.listdir(path)
-    carpet_image_paths=[path+image_name for image_name in entries]
-    my_carpet_transforms=transforms.Compose([
+    image_paths=[path+image_name for image_name in entries]
+    my_transforms=transforms.Compose([
         transforms.Resize((image_size,image_size)),
         transforms.ToTensor(),
         normalizeImage()
 
     ])
-    dataset = ImageDataset(carpet_image_paths,my_carpet_transforms)
+    dataset = ImageDataset(image_paths,my_transforms)
     return dataset
 
 
