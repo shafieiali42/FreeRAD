@@ -1,78 +1,9 @@
-from model.Unet import SuperResModel, UNetModel
+from model.Unet import UNetModel
 from model import gaussian_diffusion as gd
 from dataset.load_dataset import get_train_dataset, get_dataLoader
-from train_util import TrainLoop
+from training2 import TrainLoop
 
 
-def main():
-    BATCH_SIZE=128
-    MICROBATCH_SIZE=2
-    lr=0.0001
-    ema_rate=0.9999
-    schedule_sampler = None
-    log_interval=10
-    save_interval=10000
-    use_fp16=False
-    fp16_scale_growth=0.001
-    weight_decay=0.0
-    lr_anneal_steps=0
-    resume_checkpoint=""
-
-    unet=create_Unet_model(
-        image_size=64,
-        num_channels=128,
-        num_res_blocks=3,
-        learn_sigma=True,
-        class_cond=False,
-        NUM_CLASSES=1000,    
-        use_checkpoint=False,
-        attention_resolutions="16,8",
-        num_heads=4,
-        num_heads_upsample=-1,
-        use_scale_shift_norm=True,
-        dropout=0.0,
-
-    )
-    diffusion=create_gaussian_diffusion(
-        steps=1000,
-        learn_sigma=True,
-        sigma_small=False,
-        noise_schedule="linear",
-        use_kl=False,
-        predict_xstart=False,
-        rescale_timesteps=True,
-        rescale_learned_sigmas=True,
-        timestep_respacing=False,)
-    
-    train_dataset=get_train_dataset("carpet/train/good/",64)
-    train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
-
-    TrainLoop(
-        unet=unet,
-        diffusion=diffusion,
-        data=train_data_loader,
-        batch_size=BATCH_SIZE,
-        microbatch=MICROBATCH_SIZE,
-        lr=lr,
-        ema_rate=ema_rate,
-        log_interval=log_interval,
-        save_interval=save_interval,
-        resume_checkpoint=resume_checkpoint,
-        use_fp16=use_fp16,
-        fp16_scale_growth=fp16_scale_growth,
-        schedule_sampler=schedule_sampler,
-        weight_decay=weight_decay,
-        lr_anneal_steps=lr_anneal_steps,
-    ).run_loop()
-
-
-
-
-
-
-
-
-    
 
 def create_gaussian_diffusion(
     *,
@@ -142,3 +73,70 @@ def create_Unet_model(
         num_heads_upsample=num_heads_upsample,
         use_scale_shift_norm=use_scale_shift_norm,
     )
+
+
+def main():
+    BATCH_SIZE=128
+    MICROBATCH_SIZE=2
+    lr=0.0001
+    ema_rate=0.9999
+    schedule_sampler = None
+    log_interval=10
+    save_interval=10000
+    use_fp16=False
+    fp16_scale_growth=0.001
+    weight_decay=0.0
+    lr_anneal_steps=0
+    resume_checkpoint=""
+
+    unet=create_Unet_model(
+        image_size=64,
+        num_channels=128,
+        num_res_blocks=3,
+        learn_sigma=True,
+        class_cond=False,
+        NUM_CLASSES=1000,    
+        use_checkpoint=False,
+        attention_resolutions="16,8",
+        num_heads=4,
+        num_heads_upsample=-1,
+        use_scale_shift_norm=True,
+        dropout=0.0,
+
+    )
+    diffusion=create_gaussian_diffusion(
+        steps=1,
+        learn_sigma=True,
+        sigma_small=False,
+        noise_schedule="linear",
+        use_kl=False,
+        predict_xstart=False,
+        rescale_timesteps=True,
+        rescale_learned_sigmas=True,
+        timestep_respacing=False,)
+    
+    train_dataset=get_train_dataset("carpet/train/good/",64)
+    train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
+
+    TrainLoop(
+        unet=unet,
+        diffusion=diffusion,
+        data=train_data_loader,
+        batch_size=BATCH_SIZE,
+        microbatch=MICROBATCH_SIZE,
+        lr=lr,
+        ema_rate=ema_rate,
+        log_interval=log_interval,
+        save_interval=save_interval,
+        resume_checkpoint=resume_checkpoint,
+        use_fp16=use_fp16,
+        fp16_scale_growth=fp16_scale_growth,
+        schedule_sampler=schedule_sampler,
+        weight_decay=weight_decay,
+        lr_anneal_steps=lr_anneal_steps,
+    ).run_loop()
+
+
+
+if __name__ == "__main__":
+    main()

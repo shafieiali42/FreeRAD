@@ -6,7 +6,6 @@ import torch as th
 import torch.distributed as dist
 from torch.optim import AdamW
 
-from . import dist_util, logger
 from model.fp16_util import (
     make_master_params,
     master_params_to_model_params,
