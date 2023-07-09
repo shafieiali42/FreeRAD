@@ -144,9 +144,11 @@ def main():
         lr=lr,
         ema_rate=ema_rate,
         num_epochs=100,
-        base_model_path="None",
+        base_model_path="../drive/MyDrive/FreeRAD/models/",
         device=device,
         weight_decay=weight_decay,
+        resume_training=False,
+        last_checkpoint=-1,
     ).run_loop()
 
 
