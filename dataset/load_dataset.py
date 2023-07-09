@@ -15,7 +15,7 @@ from PIL import Image
 class normalizeImage:
   def __call__(self,sample):
     sample=sample.numpy()
-    sample=sample.astype("float64")
+    sample=sample.astype("float32")
     # sample=sample/127.5
     # sample=sample-1
     sample=sample/255
