@@ -82,5 +82,5 @@ class TrainLoop:
             print(f'Train Loss: {epoch_loss:.4f}')
             if self.step%1000==0:
                 print(f"Step: {self.step}")
-            if self.step%5000==0:
+            if self.step%10000==0:
                 th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
