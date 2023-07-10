@@ -16,11 +16,8 @@ class normalizeImage:
   def __call__(self,sample):
     sample=sample.numpy()
     sample=sample.astype("float32")
-    # sample=sample/127.5
-    # sample=sample-1
-    sample=sample/255
-    # sample=sample-1
-    
+    sample=sample/255.0
+    sample=sample*2-1
     sample=torch.from_numpy(sample)
     return sample
 

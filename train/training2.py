@@ -42,20 +42,26 @@ class TrainLoop:
         self.num_epochs=num_epochs
         self.base_model_path=base_model_path
         self.last_checkpoint=last_checkpoint
+        self.step=0
         if resume_training:
             checkpoint = th.load(base_model_path+f'checkpoint_ep{last_checkpoint}.pt')
             self.unet.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.step=checkpoint["step"]
             # self.last_checkpoint = checkpoint['epoch']
             # loss = checkpoint['loss']
 
 
     def run_loop(self):
         for epoch in range(self.last_checkpoint+1,self.num_epochs):
+            if self.step>=30000:
+                th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep_final{epoch}.pt')
+                break
             print(f"Epoch: {epoch}/{self.num_epochs}")
             train_loss=0
             iter_cnt=0
             for batch in tqdm(self.train_dataLoader):
+                self.step+=1
                 batch=batch.to(self.device)
                 self.optimizer.zero_grad()
                 t=np.random.uniform(0,self.diffusion.num_timesteps,size=(self.batch_size,))
@@ -74,4 +80,7 @@ class TrainLoop:
                 iter_cnt+=1
             epoch_loss=train_loss/iter_cnt
             print(f'Train Loss: {epoch_loss:.4f}')
-            th.save({'epoch': epoch,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
+            if self.step%1000==0:
+                print(f"Step: {self.step}")
+            if self.step%5000==0:
+                th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')

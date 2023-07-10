@@ -84,6 +84,7 @@ def create_Unet_model(
 
 def main():
     BATCH_SIZE=2
+    IMAGE_SIZE=256,
     MICROBATCH_SIZE=2
     lr=0.0001
     ema_rate=0.9999
@@ -98,7 +99,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     unet=create_Unet_model(
-        image_size=64,
+        image_size=IMAGE_SIZE,
         num_channels=128,
         num_res_blocks=3,
         learn_sigma=True,
@@ -123,7 +124,7 @@ def main():
         rescale_learned_sigmas=True,
         timestep_respacing=False,)
     
-    train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",64)
+    train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
     # print(train_dataset.__getitem__(0))
     # from torchvision import datasets, transforms, models
     # a=train_dataset.__getitem__(0)
@@ -143,7 +144,7 @@ def main():
         batch_size=BATCH_SIZE,
         lr=lr,
         ema_rate=ema_rate,
-        num_epochs=100,
+        num_epochs=1000,
         base_model_path="../drive/MyDrive/FreeRAD/models/",
         device=device,
         weight_decay=weight_decay,
