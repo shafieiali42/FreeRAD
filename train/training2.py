@@ -74,4 +74,4 @@ class TrainLoop:
                 iter_cnt+=1
             epoch_loss=train_loss/iter_cnt
             print(f'Train Loss: {epoch_loss:.4f}')
-            # th.save({'epoch': epoch,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
+            th.save({'epoch': epoch,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
