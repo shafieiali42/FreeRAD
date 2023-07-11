@@ -84,7 +84,7 @@ def create_Unet_model(
 
 def main():
     BATCH_SIZE=2
-    IMAGE_SIZE=256
+    IMAGE_SIZE=64
     MICROBATCH_SIZE=2
     lr=0.0001
     ema_rate=0.9999
