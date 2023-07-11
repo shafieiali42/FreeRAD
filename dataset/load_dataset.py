@@ -38,6 +38,14 @@ class ImageDataset(Dataset):
     def __len__(self):
       return len(self.image_paths)
 
+def get_my_transforms(image_size):
+  my_transforms=transforms.Compose([
+          transforms.Resize((image_size,image_size)),
+          transforms.ToTensor(),
+          normalizeImage()
+
+      ])
+  return my_transforms
 
 
 def get_train_dataset(path,image_size):

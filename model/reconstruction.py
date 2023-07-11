@@ -9,6 +9,8 @@ from model import gaussian_diffusion as gd
 from dataset.load_dataset import get_train_dataset, get_dataLoader
 import torch
 import matplotlib.pyplot as plt
+from PIL import Image
+
 
 
 def create_gaussian_diffusion(
@@ -82,8 +84,18 @@ def create_Unet_model(
 
 class Reconstructor:
     def __init__(self, model_path, device='cpu'):
-        self.IMAGE_SIZE = 256
-        self.gd = create_gaussian_diffusion()
+        self.IMAGE_SIZE = 64
+        self.gd =create_gaussian_diffusion(
+                    steps=1000,
+                    learn_sigma=True,
+                    sigma_small=False,
+                    noise_schedule="linear",
+                    use_kl=False,
+                    predict_xstart=False,
+                    rescale_timesteps=True,
+                    rescale_learned_sigmas=True,
+                    timestep_respacing=False,)
+                
         self.model = create_Unet_model(image_size=self.IMAGE_SIZE,
                                        num_channels=128,
                                        num_res_blocks=3,
@@ -100,9 +112,32 @@ class Reconstructor:
             self.load_model(model_path, device)
 
     def load_model(self, path, device="cpu"):
-        self.model.load_state_dict(torch.load(path, map_location=device))
+        checkpoint = torch.load(path,map_location=device)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
 
     def one_shot_reconstruct(self, x, t):
         noisy=self.gd.q_sample(x,t)
         reconstructed=self.gd.p_sample(self.model,noisy,t)
         return reconstructed
+
+
+
+
+def main():
+    from torchvision import datasets, transforms, models
+    from dataset import load_dataset
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final215.pt",device=device)
+    # reconstructor=Reconstructor(model_path=None,device=device)
+    good_image=Image.open("MVTecAD/carpet/train/good/000.png")    
+    bad_image=Image.open("MVTecAD/carpet/test/hole/000.png") 
+    my_transforms=load_dataset.get_my_transforms(image_size=reconstructor.IMAGE_SIZE)
+    good_image_transformed=my_transforms(good_image)
+    bad_image_transformed=my_transforms(bad_image)
+    # print(good_image_transformed)
+    good_image_reconstructed=reconstructor.one_shot_reconstruct(good_image_transformed,20)
+    bad_image_reconstructed=reconstructor.one_shot_reconstruct(bad_image_transformed,20)
+
+
+if __name__ == "__main__":
+    main()
