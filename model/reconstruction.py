@@ -117,10 +117,10 @@ class Reconstructor:
 
     def one_shot_reconstruct(self, x, t):
         noisy=self.gd.q_sample(x,t)
-        model_output = self.model(x, self.gd._scale_timesteps(t))
-        model_output, model_var_values = torch.split(model_output, 3, dim=1)
-        reconstructed=self.gd._predict_xstart_from_eps(noisy,t,model_output)
-        # reconstructed=self.gd.p_sample(self.model,noisy,t)
+        # model_output = self.model(x, self.gd._scale_timesteps(t))
+        # model_output, model_var_values = torch.split(model_output, 3, dim=1)
+        # reconstructed=self.gd._predict_xstart_from_eps(noisy,t,model_output)
+        reconstructed=self.gd.p_sample(self.model,noisy,t)
         return reconstructed
 
 
