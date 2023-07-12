@@ -45,7 +45,7 @@ def get_train_dataset(path,image_size):
     image_paths=[path+image_name for image_name in entries]
     my_transforms=transforms.Compose([
         transforms.Resize((image_size,image_size)),
-        transforms.ToTensor(),
+        transforms.PILToTensor(),
         normalizeImage()
 
     ])
