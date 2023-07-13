@@ -41,7 +41,7 @@ class ImageDataset(Dataset):
 def get_my_transforms(image_size):
   my_transforms=transforms.Compose([
           transforms.Resize((image_size,image_size)),
-          transforms.ToTensor(),
+          transforms.PILToTensor(),
           normalizeImage()
 
       ])
