@@ -6,10 +6,17 @@ sys.path.insert(0, cwd)
 
 from model.Unet import UNetModel
 from model import gaussian_diffusion as gd
-from dataset.load_dataset import get_train_dataset, get_dataLoader
+from dataset.load_dataset import get_test_dataset, get_dataLoader
 import torch
 import matplotlib.pyplot as plt
 from PIL import Image
+import cv2 as cv
+import numpy as np
+from torchvision import datasets, transforms, models
+from dataset import load_dataset
+import torch
+import matplotlib.pyplot as plt
+import tqdm
 
 
 
@@ -117,30 +124,143 @@ class Reconstructor:
 
     def one_shot_reconstruct(self, x, t):
         noisy=self.gd.q_sample(x,t)
-        # model_output = self.model(x, self.gd._scale_timesteps(t))
-        # model_output, model_var_values = torch.split(model_output, 3, dim=1)
-        # reconstructed=self.gd._predict_xstart_from_eps(noisy,t,model_output)
         reconstructed=self.gd.p_sample(self.model,noisy,t)
         return reconstructed
 
+    def calc_mean_error_maps_of_traing():
+        pass
 
+
+    def resize_batch_by_size(img_batch, resize_width, resize_height):
+        """
+        :params
+            image: np.array(), shape -> (batch, width, height, channels)
+            resize_width: The resize width dimension. 
+            resize_height: The resize height dimension. 
+
+        :returns
+            array of shape -> (batch, resized_width, resized_height, channels)
+        """
+        batch, original_width, original_height, channel = img_batch.shape
+        
+        rd_ch = img_batch[:,:,:,0]
+        gr_ch = img_batch[:,:,:,1]
+        bl_ch = img_batch[:,:,:,2]
+        
+        resized_images = np.zeros((batch, resize_width, resize_height, channel), dtype=np.uint8)
+        
+        x_scale = original_width/resize_width
+        y_scale = original_height/resize_height
+        
+        resize_idx = np.zeros((resize_width, resize_height))
+        resize_index_x = np.ceil(np.arange(0, original_width, x_scale)).astype(int)
+        resize_index_y = np.ceil(np.arange(0, original_height, y_scale)).astype(int)
+        resize_index_x[np.where(resize_index_x == original_width)]  -= 1
+        resize_index_y[np.where(resize_index_y == original_height)] -= 1
+        
+        resized_images[:,:,:,0] = rd_ch[:,resize_index_x,:][:,:,resize_index_y]
+        resized_images[:,:,:,1] = gr_ch[:,resize_index_x,:][:,:,resize_index_y]
+        resized_images[:,:,:,2] = bl_ch[:,resize_index_x,:][:,:,resize_index_y]
+        
+        return resized_images
+    def resize_batch_by_scale(self,img_batch, fx, fy):
+        """
+        :params
+            image: np.array(), shape -> (batch, width, height, channels)
+            resize_width: The resize width dimension. 
+            resize_height: The resize height dimension. 
+
+        :returns
+            array of shape -> (batch, resized_width, resized_height, channels)
+        """
+        
+        batch, original_width, original_height, channel = img_batch.shape
+        resize_width=int(original_width*fy)
+        resize_height=int(original_height*fx)
+
+        rd_ch = img_batch[:,:,:,0]
+        gr_ch = img_batch[:,:,:,1]
+        bl_ch = img_batch[:,:,:,2]
+        
+        resized_images = np.zeros((batch, resize_width, resize_height, channel), dtype=np.uint8)
+        
+        
+        resize_idx = np.zeros((resize_width, resize_height))
+        resize_index_x = np.ceil(np.arange(0, original_width, fx)).astype(int)
+        resize_index_y = np.ceil(np.arange(0, original_height, fy)).astype(int)
+        resize_index_x[np.where(resize_index_x == original_width)]  -= 1
+        resize_index_y[np.where(resize_index_y == original_height)] -= 1
+        
+        resized_images[:,:,:,0] = rd_ch[:,resize_index_x,:][:,:,resize_index_y]
+        resized_images[:,:,:,1] = gr_ch[:,resize_index_x,:][:,:,resize_index_y]
+        resized_images[:,:,:,2] = bl_ch[:,resize_index_x,:][:,:,resize_index_y]
+        
+        return resized_images
+    
+    def anomaly_score_calculation(self,images,reconstructed_images,mean_error_maps_of_traing=None,chanel_axis=2,mean_filter_size=3):
+        images_copy=images.copy()
+        reconstructed_images_copy=reconstructed_images.copy()
+        images_copy = images_copy.astype("float64")
+        reconstructed_images_copy = reconstructed_images_copy.astype("float64")
+        scales=[1,0.5,0.25,0.125]
+        error_maps=[]
+        for scale in scales:
+            resized_image = self.resize_batch_by_scale(images_copy,scale,scale)
+            resized_reconstructed = self.resize_batch_by_scale(reconstructed_images_copy,scale,scale)
+            diff=(resized_image-resized_reconstructed)**2
+            err_l=np.mean(diff,axis=chanel_axis)
+            err_l=self.resize_batch_by_size(err_l,images_copy.shape[2],images_copy.shape[1])
+            error_maps.append(err_l)
+        mean_err_map=np.zeros_like(error_maps[0])
+        for i in range(len(error_maps)):
+            mean_err_map=mean_err_map+error_maps[i]/len(error_maps)
+        filter=np.ones((mean_filter_size,mean_filter_size),dtype="float64")/(mean_filter_size**2)
+        mean_err_map=cv.filter2D(mean_err_map,-1,filter,borderType=cv.BORDER_CONSTANT)
+
+        plt.imshow(mean_err_map,cmap="gray")
 
 
 def main():
-    from torchvision import datasets, transforms, models
-    from dataset import load_dataset
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final215.pt",device=device)
-    # reconstructor=Reconstructor(model_path=None,device=device)
-    good_image=Image.open("MVTecAD/carpet/train/good/000.png")    
-    bad_image=Image.open("MVTecAD/carpet/test/hole/000.png") 
-    my_transforms=load_dataset.get_my_transforms(image_size=reconstructor.IMAGE_SIZE)
-    good_image_transformed=my_transforms(good_image)
-    bad_image_transformed=my_transforms(bad_image)
-    # print(good_image_transformed)
-    good_image_reconstructed=reconstructor.one_shot_reconstruct(good_image_transformed,20)
-    bad_image_reconstructed=reconstructor.one_shot_reconstruct(bad_image_transformed,20)
+    BATCH_SIZE=1
+    IMAGE_SIZE=64
+    path="MVTecAD/carpet/test/metal_contamination"
+    entries = os.listdir(path=path)
+    contamination=[path+image_name for image_name in entries]
+    contamination_label=[1 for i in range(len(contamination))]
+    
+    path="MVTecAD/carpet/test/cut"
+    entries = os.listdir(path=path)
+    cut=[path+image_name for image_name in entries]
+    cut_label=[1 for i in range(len(cut))]
+    
+    
+    path="MVTecAD/carpet/test/good"
+    entries = os.listdir(path=path)
+    good=[path+image_name for image_name in entries]
+    good_label=[1 for i in range(len(good))]
+    
+    image_paths=contamination+cut+good
+    labels=contamination_label+cut_label+good_label
+    test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE)
+    test_data_loader=get_dataLoader(test_dataset,batch_size=BATCH_SIZE,shuffle=False)
+    
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final215.pt",device=device)
+    reconstructor=Reconstructor(model_path=None,device=device)
+    mean_error_maps_of_traing=reconstructor.calc_mean_error_maps_of_traing()
+    for batch in tqdm(test_data_loader):
+                images,batch_labels=batch
+                images=images.to(device)
+                batch_labels=batch_labels.to(device)
+                t=np.array([20 for i in range(len(labels))])
+                t = torch.from_numpy(t).long().to(device)
+                reconstructed_images=reconstructor.one_shot_reconstruct(images,t)
+                reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing=mean_error_maps_of_traing,chanel_axis=)
+                
+            
+    
 
 if __name__ == "__main__":
     main()

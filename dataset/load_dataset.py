@@ -47,7 +47,6 @@ def get_my_transforms(image_size):
       ])
   return my_transforms
 
-
 def get_train_dataset(path,image_size):
     entries = os.listdir(path)
     image_paths=[path+image_name for image_name in entries]
@@ -65,3 +64,31 @@ def get_dataLoader(dataset,batch_size,shuffle):
    data_loader=DataLoader(dataset=dataset,batch_size=batch_size,shuffle=shuffle)
    return data_loader
 
+
+class TestImageDataset(Dataset):
+    def __init__(self,image_paths,labels,transform=None):
+      self.image_paths=image_paths
+      self.transform=transform
+      self.labels=labels
+
+    def __getitem__(self, index):
+      # image=cv2.imread(self.image_paths[index])
+      image=Image.open(self.image_paths[index])
+      if self.transform is not None:
+        image=self.transform(image)
+      label=self.labels[index]
+      label=torch.tensor(label)
+      return image,label
+
+    def __len__(self):
+      return len(self.image_paths)
+
+def get_test_dataset(image_paths,labels,image_size):
+   my_transforms=transforms.Compose([
+        transforms.Resize((image_size,image_size)),
+        transforms.PILToTensor(),
+        normalizeImage()
+
+    ])
+   datasets=TestImageDataset(image_paths=image_paths,labels=labels,transform=my_transforms)
+   return datasets
