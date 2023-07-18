@@ -162,8 +162,7 @@ class Reconstructor:
         mean_err_map=torch.squeeze(mean_err_map,dim=1)
         return mean_err_map
 
-    def calc_error_ms_of_training_data(self,train_dataset,t):
-        train_loader=get_dataLoader(train_dataset,1,shuffle=False)
+    def calc_error_ms_of_training_data(self,train_loader,t):
         training_error_ms = torch.empty((len(train_loader), self.IMAGE_SIZE, self.IMAGE_SIZE))
         for i,train_batch in enumerate(train_loader):
             train_batch=train_batch.to(self.device)
@@ -211,7 +210,8 @@ def main():
     reconstructor=Reconstructor(model_path=None,device=device)
 
     train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
-    t=np.array([20 for i in range(train_dataset.__len__())])
+    train_loader=get_dataLoader(train_dataset,BATCH_SIZE,False)
+    t=np.array([20 for i in range(BATCH_SIZE)])
     t = torch.from_numpy(t).long().to(device)            
     mean_error_maps_of_traing=reconstructor.calc_error_ms_of_training_data(train_dataset,t)
     anomaly_scores=[]
