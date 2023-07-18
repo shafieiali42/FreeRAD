@@ -195,7 +195,6 @@ class Reconstructor:
         anomaly_scores=scores[np.where(labels==1)]
         x = list(range(1,len(normal_scores)+1,1))
         y = list(range(1,len(anomaly_scores)+1,1))
-
         plt.scatter(x, normal_scores, label= "normal reconstrcution error", color= "blue", marker= "*", s=30)
         plt.scatter(y, anomaly_scores, label= "anomaly reconstrcution error", color= "red", marker= "*", s=30)
         plt.xlabel('Data points')
@@ -205,6 +204,14 @@ class Reconstructor:
         plt.savefig(f'{result_name}.png')
 
 
+def plot_images(image1,image2,result_name):
+    f, axs = plt.subplots(1,2)
+    axs[0].imshow(image1)
+    axs[1].imshow(image2)
+    plt.savefig(f'{result_name}.png')
+    plt.close()
+
+    
 def main():
     BATCH_SIZE=1
     IMAGE_SIZE=64
@@ -237,19 +244,24 @@ def main():
 
     train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
     train_loader=get_dataLoader(train_dataset,BATCH_SIZE,False)
-    t=np.array([20 for i in range(BATCH_SIZE)])
+    t=np.array([200 for i in range(BATCH_SIZE)])
     t = torch.from_numpy(t).long().to(device)            
     mean_error_maps_of_traing=reconstructor.calc_error_ms_of_training_data(train_loader,t)
     anomaly_scores=[]
     anomaly_labels=[]
-    for batch in tqdm(test_data_loader):
+    for i,batch in enumerate(tqdm(test_data_loader)):
                 images,batch_labels=batch
                 images=images.to(device)
                 batch_labels=batch_labels.to(device)
-                t=np.array([20 for i in range(len(batch_labels))])
+                t=np.array([200 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
-                # print(batch_labels.tolist())
+                print(images.shape)
                 reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
+                image1=(images+1)*0.5*255
+                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
+                image2=(reconstructed_images+1)*0.5*255
+                image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
+                plot_images(image1,image2,f"result_{i}")
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
                 anomaly_scores=anomaly_scores+score
                 anomaly_labels=anomaly_labels+batch_labels.tolist()
