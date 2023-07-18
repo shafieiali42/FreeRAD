@@ -163,12 +163,12 @@ class Reconstructor:
         return mean_err_map
 
     def calc_error_ms_of_training_data(self,train_dataset,t):
-        train_loader=get_dataLoader(train_dataset,train_dataset.__len__(),shuffle=False)
-        training_error_ms=None
-        for train_batch in train_loader:
+        train_loader=get_dataLoader(train_dataset,1,shuffle=False)
+        training_error_ms = torch.empty((len(train_loader), self.IMAGE_SIZE, self.IMAGE_SIZE))
+        for i,train_batch in enumerate(train_loader):
             train_batch=train_batch.to(self.device)
             reconstructed_images=self.one_shot_reconstruct(train_batch,t)
-            training_error_ms=self.calc_error_ms(train_batch,reconstructed_images)
+            training_error_ms[i]=self.calc_error_ms(train_batch,reconstructed_images)
         mean_training_error_ms=torch.mean(training_error_ms,dim=0)
         return mean_training_error_ms
 
