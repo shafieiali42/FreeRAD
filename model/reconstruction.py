@@ -125,15 +125,17 @@ class Reconstructor:
         checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model=self.model.to(self.device)
+        self.model.eval()
 
 
     def one_shot_reconstruct(self, x, t):
-        print(x.shape)
-        print(x.max())
-        print(x.min())
-        print(t.shape)
-        print(t)
-        print("-"*500)
+      with torch.no_grad():            
+        # print(x.shape)
+        # print(x.max())
+        # print(x.min())
+        # print(t.shape)
+        # print(t)
+        # print("-"*500)
         noisy=self.gd.q_sample(x,t)
         reconstructed=self.gd.p_sample(self.model,noisy,t)
         return reconstructed
@@ -210,6 +212,8 @@ class Reconstructor:
         plt.title('Reconstruction error distribution')
         plt.legend()
         plt.savefig(f'{result_name}.png')
+        plt.clf()
+        plt.close()
 
 
 def plot_images(image1,image2,result_name):
@@ -217,6 +221,7 @@ def plot_images(image1,image2,result_name):
     axs[0].imshow(image1)
     axs[1].imshow(image2)
     plt.savefig(f'{result_name}.png')
+    plt.clf()
     plt.close()
 
     
@@ -243,13 +248,14 @@ def main():
     labels=contamination_label+cut_label+good_label
     test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE)
     test_data_loader=get_dataLoader(test_dataset,batch_size=BATCH_SIZE,shuffle=False)
+    original_test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE,transform=False)
+    original_test_data_loader=get_dataLoader(original_test_dataset,batch_size=BATCH_SIZE,shuffle=False)
     
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final215.pt",device=device)
-    reconstructor=Reconstructor(model_path=None,device=device)
-
+    
     train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
     train_loader=get_dataLoader(train_dataset,BATCH_SIZE,False)
     t=np.array([200 for i in range(BATCH_SIZE)])
@@ -264,14 +270,20 @@ def main():
                 t=np.array([200 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
                 reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
+                # print("+"*500)
+                # print(reconstructed_images)
+                # print(reconstructed_images.max())
+                # print(reconstructed_images.min())
                 image1=(images+1)*0.5*255
                 image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
                 image2=(reconstructed_images+1)*0.5*255
                 image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
-                plt.imshow(image2)
-                plt.savefig("image12.png")
-                break
+                # plt.imshow(image2)
+                # plt.savefig("image12.png")
+                # plt.clf()
+                # plot_images(original_test_dataset.__getitem__(i)[0].numpy().reshape(64,64,3).astype("uint8"),image2,f"result_{i}")
                 plot_images(image1,image2,f"result_{i}")
+            
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
                 anomaly_scores=anomaly_scores+score
                 anomaly_labels=anomaly_labels+batch_labels.tolist()

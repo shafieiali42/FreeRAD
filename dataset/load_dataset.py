@@ -83,12 +83,20 @@ class TestImageDataset(Dataset):
     def __len__(self):
       return len(self.image_paths)
 
-def get_test_dataset(image_paths,labels,image_size):
-   my_transforms=transforms.Compose([
-        transforms.Resize((image_size,image_size)),
-        transforms.PILToTensor(),
-        normalizeImage()
+def get_test_dataset(image_paths,labels,image_size,transform=True):
+   if transform:  
+    my_transforms=transforms.Compose([
+          transforms.Resize((image_size,image_size)),
+          transforms.PILToTensor(),
+          normalizeImage()
 
-    ])
+      ])
+   else:
+      my_transforms=transforms.Compose([
+          transforms.Resize((image_size,image_size)),
+          transforms.PILToTensor(),
+      ])
+
+    
    datasets=TestImageDataset(image_paths=image_paths,labels=labels,transform=my_transforms)
    return datasets
