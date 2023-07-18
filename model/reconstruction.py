@@ -16,7 +16,7 @@ from torchvision import datasets, transforms, models
 from dataset import load_dataset
 import torch
 import matplotlib.pyplot as plt
-import tqdm
+from tqdm import tqdm
 from utils.my_utils import resize_batch_by_scale,resize_batch_by_size,resize_image
 
 
@@ -139,7 +139,7 @@ class Reconstructor:
         error_mp=(resized_images-resized_reconstructed)**2
         error_mp=torch.mean(error_mp,dim=1)
         error_mp = torch.unsqueeze(error_mp, dim=1)
-        error_mp=resize_image(error_mp,scale*error_mp.shape[2],scale*error_mp.shape[3])
+        error_mp=resize_image(error_mp,(1/scale)*error_mp.shape[2],(1/scale)*error_mp.shape[3])
         error_mp = torch.squeeze(error_mp, dim=1)
         return error_mp
         
@@ -147,26 +147,37 @@ class Reconstructor:
     def calc_error_ms(self,images,reconstructed_images,filter_size=3):
         import torch.nn.functional as F
         scales=[1,0.5,0.25,0.125]
-        error_maps=[]
-        for scale in scales:
-            error_mp=self.calc_error_map(images,reconstructed_images,scale)
-            error_maps.append(error_mp)
-        mean_err_map=torch.zeros_like(error_maps[0],device=self.device)
-        for i in range(len(error_maps)):
-            mean_err_map=mean_err_map+error_maps[i]/len(error_maps)
+        # error_maps=[]
+        error_maps = torch.empty((len(scales), self.IMAGE_SIZE, self.IMAGE_SIZE),device=self.device)
+        for i,scale in enumerate(scales):
+            error_mp=self.calc_error_map(images.clone(),reconstructed_images.clone(),scale)
+            # error_maps.append(error_mp)
+            # print(scale)
+            # print(error_mp.shape)
+            error_maps[i]=error_mp
+        # mean_err_map=torch.zeros_like(error_maps[0],device=self.device)
+        mean_err_map=torch.mean(error_maps,dim=0).to(self.device)
+        # for i in range(len(error_maps)):
+            # mean_err_map=mean_err_map+error_maps[i]/len(error_maps)
         
-        mean_err_map = torch.unsqueeze(mean_err_map, dim=1)
-        mean_kernel = torch.ones((1, 1, filter_size, filter_size)) / (filter_size * filter_size)
+        # print(mean_err_map.shape)
+        mean_err_map = torch.unsqueeze(mean_err_map, dim=0)
+        mean_kernel = torch.ones((1,1,filter_size, filter_size)) / (filter_size * filter_size)
         mean_kernel=mean_kernel.to(self.device)
+        # print(mean_err_map.shape)
+        # print(mean_kernel.shape)
         mean_err_map = F.conv2d(mean_err_map, mean_kernel, padding=filter_size // 2)
-        mean_err_map=torch.squeeze(mean_err_map,dim=1)
+        # print(mean_err_map.shape)
+        # mean_err_map=torch.squeeze(mean_err_map,dim=1)
+        # print(mean_err_map.shape)
+        # print("-"*100)
         return mean_err_map
 
     def calc_error_ms_of_training_data(self,train_loader,t):
-        training_error_ms = torch.empty((len(train_loader), self.IMAGE_SIZE, self.IMAGE_SIZE))
+        training_error_ms = torch.empty((len(train_loader), self.IMAGE_SIZE, self.IMAGE_SIZE),device=self.device)
         for i,train_batch in enumerate(train_loader):
             train_batch=train_batch.to(self.device)
-            reconstructed_images=self.one_shot_reconstruct(train_batch,t)
+            reconstructed_images=self.one_shot_reconstruct(train_batch,t)["pred_xstart"]
             training_error_ms[i]=self.calc_error_ms(train_batch,reconstructed_images)
         mean_training_error_ms=torch.mean(training_error_ms,dim=0)
         return mean_training_error_ms
@@ -182,18 +193,18 @@ class Reconstructor:
 def main():
     BATCH_SIZE=1
     IMAGE_SIZE=64
-    path="MVTecAD/carpet/test/metal_contamination"
+    path="MVTecAD/carpet/test/metal_contamination/"
     entries = os.listdir(path=path)
     contamination=[path+image_name for image_name in entries]
     contamination_label=[1 for i in range(len(contamination))]
     
-    path="MVTecAD/carpet/test/cut"
+    path="MVTecAD/carpet/test/cut/"
     entries = os.listdir(path=path)
     cut=[path+image_name for image_name in entries]
     cut_label=[1 for i in range(len(cut))]
     
     
-    path="MVTecAD/carpet/test/good"
+    path="MVTecAD/carpet/test/good/"
     entries = os.listdir(path=path)
     good=[path+image_name for image_name in entries]
     good_label=[1 for i in range(len(good))]
@@ -213,15 +224,15 @@ def main():
     train_loader=get_dataLoader(train_dataset,BATCH_SIZE,False)
     t=np.array([20 for i in range(BATCH_SIZE)])
     t = torch.from_numpy(t).long().to(device)            
-    mean_error_maps_of_traing=reconstructor.calc_error_ms_of_training_data(train_dataset,t)
+    mean_error_maps_of_traing=reconstructor.calc_error_ms_of_training_data(train_loader,t)
     anomaly_scores=[]
     for batch in tqdm(test_data_loader):
                 images,batch_labels=batch
                 images=images.to(device)
                 batch_labels=batch_labels.to(device)
-                t=np.array([20 for i in range(len(labels))])
+                t=np.array([20 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
-                reconstructed_images=reconstructor.one_shot_reconstruct(images,t)
+                reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
                 anomaly_scores=anomaly_scores+score
     print(anomaly_scores)
