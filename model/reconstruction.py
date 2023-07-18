@@ -117,15 +117,23 @@ class Reconstructor:
                                        num_heads_upsample=-1,
                                        use_scale_shift_norm=True,
                                        dropout=0.0, )
-        self.model=self.model.to(device)
+        self.model=self.model.to(self.device)
         if model_path is not None:
-            self.load_model(model_path, device)
-
-    def load_model(self, path, device="cpu"):
-        checkpoint = torch.load(path,map_location=device)
+            self.load_model(model_path,self.device)
+            
+    def load_model(self, path, device):
+        checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model=self.model.to(self.device)
+
 
     def one_shot_reconstruct(self, x, t):
+        print(x.shape)
+        print(x.max())
+        print(x.min())
+        print(t.shape)
+        print(t)
+        print("-"*500)
         noisy=self.gd.q_sample(x,t)
         reconstructed=self.gd.p_sample(self.model,noisy,t)
         return reconstructed
@@ -255,12 +263,14 @@ def main():
                 batch_labels=batch_labels.to(device)
                 t=np.array([200 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
-                print(images.shape)
                 reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
                 image1=(images+1)*0.5*255
                 image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
                 image2=(reconstructed_images+1)*0.5*255
                 image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
+                plt.imshow(image2)
+                plt.savefig("image12.png")
+                break
                 plot_images(image1,image2,f"result_{i}")
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
                 anomaly_scores=anomaly_scores+score
