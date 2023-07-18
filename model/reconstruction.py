@@ -150,12 +150,13 @@ class Reconstructor:
         for scale in scales:
             error_mp=self.calc_error_map(images,reconstructed_images,scale)
             error_maps.append(error_mp)
-        mean_err_map=np.zeros_like(error_maps[0])
+        mean_err_map=torch.zeros_like(error_maps[0],device=self.device)
         for i in range(len(error_maps)):
             mean_err_map=mean_err_map+error_maps[i]/len(error_maps)
         
         mean_err_map = torch.unsqueeze(mean_err_map, dim=1)
         mean_kernel = torch.ones((1, 1, filter_size, filter_size)) / (filter_size * filter_size)
+        mean_kernel=mean_kernel.to(self.device)
         mean_err_map = F.conv2d(mean_err_map, mean_kernel, padding=filter_size // 2)
         mean_err_map=torch.squeeze(mean_err_map,dim=1)
         return mean_err_map
