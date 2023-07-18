@@ -275,8 +275,12 @@ def main():
                 # print(reconstructed_images.max())
                 # print(reconstructed_images.min())
                 image1=(images+1)*0.5*255
+                image1[image1>255]=255
+                image1[image1<0]=0
                 image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
                 image2=(reconstructed_images+1)*0.5*255
+                image2[image2>255]=255
+                image2[image2<0]=0
                 image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
                 # plt.imshow(image2)
                 # plt.savefig("image12.png")
