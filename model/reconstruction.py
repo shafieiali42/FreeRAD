@@ -117,6 +117,7 @@ class Reconstructor:
                                        num_heads_upsample=-1,
                                        use_scale_shift_norm=True,
                                        dropout=0.0, )
+        self.model=self.model.to(device)
         if model_path is not None:
             self.load_model(model_path, device)
 
