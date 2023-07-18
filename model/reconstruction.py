@@ -188,6 +188,21 @@ class Reconstructor:
         anomaly_score=torch.max(torch.abs(error_ms-mean_training_error_ms).view(error_ms.shape[0],-1),dim=1)[0]
         return anomaly_score.tolist()
 
+    def save_result(self,scores,labels,result_name):
+        labels=np.array(labels)
+        scores=np.array(scores)
+        normal_scores=scores[np.where(labels==0)]
+        anomaly_scores=scores[np.where(labels==1)]
+        x = list(range(1,len(normal_scores)+1,1))
+        y = list(range(1,len(anomaly_scores)+1,1))
+
+        plt.scatter(x, normal_scores, label= "normal reconstrcution error", color= "blue", marker= "*", s=30)
+        plt.scatter(y, anomaly_scores, label= "anomaly reconstrcution error", color= "red", marker= "*", s=30)
+        plt.xlabel('Data points')
+        plt.ylabel('reconstruction error')
+        plt.title('Reconstruction error distribution')
+        plt.legend()
+        plt.savefig(f'{result_name}.png')
 
 
 def main():
@@ -207,7 +222,7 @@ def main():
     path="MVTecAD/carpet/test/good/"
     entries = os.listdir(path=path)
     good=[path+image_name for image_name in entries]
-    good_label=[1 for i in range(len(good))]
+    good_label=[0 for i in range(len(good))]
     
     image_paths=contamination+cut+good
     labels=contamination_label+cut_label+good_label
@@ -226,18 +241,23 @@ def main():
     t = torch.from_numpy(t).long().to(device)            
     mean_error_maps_of_traing=reconstructor.calc_error_ms_of_training_data(train_loader,t)
     anomaly_scores=[]
+    anomaly_labels=[]
     for batch in tqdm(test_data_loader):
                 images,batch_labels=batch
                 images=images.to(device)
                 batch_labels=batch_labels.to(device)
                 t=np.array([20 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
+                # print(batch_labels.tolist())
                 reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
                 anomaly_scores=anomaly_scores+score
+                anomaly_labels=anomaly_labels+batch_labels.tolist()
     print(anomaly_scores)
+    print(anomaly_labels)
+    reconstructor.save_result(anomaly_scores,anomaly_labels,"Reconstruction_error")
             
-    
+
 
 if __name__ == "__main__":
     main()
