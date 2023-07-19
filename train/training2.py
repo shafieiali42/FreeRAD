@@ -48,6 +48,8 @@ class TrainLoop:
             self.unet.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.step=checkpoint["step"]
+            self.unet=self.unet.to(self.device)
+            self.optimizer=self.optimizer.to(device)
             # self.last_checkpoint = checkpoint['epoch']
             # loss = checkpoint['loss']
 
@@ -80,7 +82,7 @@ class TrainLoop:
                 iter_cnt+=1
                 if self.step%1000==0:
                     print(f"Step: {self.step}")
-                if self.step%10000==0:
+                if self.step%5000==0:
                     th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': train_loss/iter_cnt,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
             epoch_loss=train_loss/iter_cnt
             print(f'Train Loss: {epoch_loss:.4f}')

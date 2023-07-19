@@ -125,16 +125,6 @@ def main():
         timestep_respacing=False,)
     
     train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
-    # print(train_dataset.__getitem__(0))
-    # from torchvision import datasets, transforms, models
-    # a=train_dataset.__getitem__(0)
-    # print(a.max())
-    # print(a.min())
-    # b=(a+1)*127.5
-    # print(b.max())
-    # print(b.min())
-    # plt.imsave("image.jpg",transforms.ToPILImage()(a*255))
-    # exit(0)
     train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
     unet=unet.to(device=device)
     TrainLoop(
