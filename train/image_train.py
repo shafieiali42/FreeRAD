@@ -84,7 +84,7 @@ def create_Unet_model(
 
 def main():
     BATCH_SIZE=2
-    IMAGE_SIZE=64
+    IMAGE_SIZE=256
     MICROBATCH_SIZE=2
     lr=0.0001
     ema_rate=0.9999
@@ -138,8 +138,8 @@ def main():
         base_model_path="../drive/MyDrive/FreeRAD/models/",
         device=device,
         weight_decay=weight_decay,
-        resume_training=False,
-        last_checkpoint=-1,
+        resume_training=True,
+        last_checkpoint=71,
     ).run_loop()
 
 

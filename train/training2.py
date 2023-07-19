@@ -50,6 +50,7 @@ class TrainLoop:
             self.step=checkpoint["step"]
             self.unet=self.unet.to(self.device)
             self.optimizer=self.optimizer.to(device)
+            print(self.step)
             # self.last_checkpoint = checkpoint['epoch']
             # loss = checkpoint['loss']
 
