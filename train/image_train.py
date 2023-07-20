@@ -124,7 +124,7 @@ def main():
         rescale_learned_sigmas=True,
         timestep_respacing=False,)
     
-    train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
+    train_dataset=get_train_dataset("MVTecAD/hazelnut/train/good/",image_size=IMAGE_SIZE)
     train_data_loader=get_dataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
     unet=unet.to(device=device)
     TrainLoop(
@@ -138,8 +138,8 @@ def main():
         base_model_path="../drive/MyDrive/FreeRAD/models/",
         device=device,
         weight_decay=weight_decay,
-        resume_training=True,
-        last_checkpoint=71,
+        resume_training=False,
+        last_checkpoint=-1,
     ).run_loop()
 
 

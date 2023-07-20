@@ -58,7 +58,7 @@ class TrainLoop:
     def run_loop(self):
         for epoch in range(self.last_checkpoint+1,self.num_epochs):
             if self.step>=30000:
-                th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'checkpoint_ep_final{epoch}.pt')
+                th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'HazelnutCheckpoint_ep{epoch}.pt')
                 break
             print(f"Epoch: {epoch}/{self.num_epochs}")
             train_loss=0
@@ -83,8 +83,8 @@ class TrainLoop:
                 iter_cnt+=1
                 if self.step%1000==0:
                     print(f"Step: {self.step}")
-                if self.step%5000==0:
-                    th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': train_loss/iter_cnt,}, self.base_model_path+f'checkpoint_ep{epoch}.pt')
+                if self.step%3000==0:
+                    th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': train_loss/iter_cnt,}, self.base_model_path+f'HazelnutCheckpoint_ep{epoch}.pt')
             epoch_loss=train_loss/iter_cnt
             print(f'Train Loss: {epoch_loss:.4f}')
             
