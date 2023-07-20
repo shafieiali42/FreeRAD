@@ -227,11 +227,18 @@ class Reconstructor:
         plt.close()
 
 
-def plot_images(image1_list,image2_list,result_name):
-    f, axs = plt.subplots(len(image1_list),2,figsize=(20,160))
+def plot_images(image1_list,image2_list,image3_list,result_name):
+    import cv2 as cv
+    f, axs = plt.subplots(len(image1_list),3,figsize=(20,160))
     for i in range(len(image1_list)):
+        # image3=np.abs(image1_list[i]-image2_list[i])
+        image3=cv.cvtColor(image3_list[i],cv.COLOR_RGB2GRAY)
+        # cv.imwrite("gray.jpg",image3)
         axs[i,0].imshow(image1_list[i])
         axs[i,1].imshow(image2_list[i])
+        print(image3.shape)
+        print(f"---------{np.max(image3)},{np.min(image3)}")
+        axs[i,2].imshow(image3,cmap="gray")
     plt.savefig(f'{result_name}.png')
     plt.clf()
     plt.close()
@@ -280,6 +287,7 @@ def main():
     my_anomaly_score=[]
     image1_list=[]
     image2_list=[]
+    image3_list=[]
     for i,batch in enumerate(tqdm(test_data_loader)):
                 images,batch_labels=batch
                 images=images.to(device)
@@ -288,13 +296,18 @@ def main():
                 t = torch.from_numpy(t).long().to(device)
                 reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
-                my_score=reconstructor.myAnomalyScore(images,reconstructed_images)
-
-        
+                error_ms=reconstructor.calc_error_ms(images,reconstructed_images)
+                error_map=torch.abs(error_ms-mean_error_maps_of_traing)
+                error_map=(error_map+1)*0.5*255
+                error_map[error_map>255]=255
+                error_map[error_map<0]=0
+                error_map=error_map.detach().cpu().numpy().reshape(256,256,3).astype("uint8")
+                image3_list.append(error_map)
+                my_score=[reconstructor.myAnomalyScore(images,reconstructed_images)]
                 image1=(images+1)*0.5*255
                 image1[image1>255]=255
                 image1[image1<0]=0
-                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(256,256,3).astype("uint8")
+                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(256,256).astype("uint8")
                 image2=(reconstructed_images+1)*0.5*255
                 image2[image2>255]=255
                 image2[image2<0]=0
@@ -307,9 +320,9 @@ def main():
                 anomaly_labels=anomaly_labels+batch_labels.tolist()
     print(anomaly_scores)
     print(anomaly_labels)
-    plot_images(image1_list[:len(contamination)],image2_list[:len(contamination)],"Contamination")
-    plot_images(image1_list[len(contamination):len(contamination)+len(cut)],image2_list[len(contamination):len(contamination)+len(cut)],"Cut")
-    plot_images(image1_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],image2_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],"Good")
+    plot_images(image1_list[:len(contamination)],image2_list[:len(contamination)],image3_list,"Contamination")
+    plot_images(image1_list[len(contamination):len(contamination)+len(cut)],image2_list[len(contamination):len(contamination)+len(cut)],image3_list,"Cut")
+    plot_images(image1_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],image2_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],image3_list,"Good")
     
     reconstructor.save_result(anomaly_scores,anomaly_labels,"Reconstruction_error")
     reconstructor.save_result(my_anomaly_score,anomaly_labels,"MyReconstruction_error")
