@@ -38,6 +38,8 @@ class ImageDataset(Dataset):
 def get_train_dataset(path, image_size):
     entries = os.listdir(path)
     image_paths = [path + image_name for image_name in entries]
+    if len(image_paths)%2==1:
+        image_paths=image_paths[:-1]
     dataset = ImageDataset(image_paths, image_size)
     return dataset
 

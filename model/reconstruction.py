@@ -232,8 +232,9 @@ def plot_images(image1_list,image2_list,image3_list,result_name):
     f, axs = plt.subplots(len(image1_list),3,figsize=(20,160))
     for i in range(len(image1_list)):
         # image3=np.abs(image1_list[i]-image2_list[i])
-        image3=cv.cvtColor(image3_list[i],cv.COLOR_RGB2GRAY)
+        # image3=cv.cvtColor(image3_list[i],cv.COLOR_RGB2GRAY)
         # cv.imwrite("gray.jpg",image3)
+        image3=image3_list[i]
         axs[i,0].imshow(image1_list[i])
         axs[i,1].imshow(image2_list[i])
         print(image3.shape)
@@ -301,13 +302,13 @@ def main():
                 error_map=(error_map+1)*0.5*255
                 error_map[error_map>255]=255
                 error_map[error_map<0]=0
-                error_map=error_map.detach().cpu().numpy().reshape(256,256,3).astype("uint8")
+                error_map=error_map.detach().cpu().numpy().reshape(256,256).astype("uint8")
                 image3_list.append(error_map)
                 my_score=[reconstructor.myAnomalyScore(images,reconstructed_images)]
                 image1=(images+1)*0.5*255
                 image1[image1>255]=255
                 image1[image1<0]=0
-                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(256,256).astype("uint8")
+                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(256,256,3).astype("uint8")
                 image2=(reconstructed_images+1)*0.5*255
                 image2[image2>255]=255
                 image2[image2<0]=0
