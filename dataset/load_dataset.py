@@ -42,9 +42,7 @@ def get_train_dataset(path, image_size):
     return dataset
 
 
-def get_test_dataset(path,labels, image_size):
-    entries = os.listdir(path)
-    image_paths = [path + image_name for image_name in entries]
+def get_test_dataset(image_paths,labels, image_size):
     dataset = TestImageDataset(image_paths,labels,image_size)
     return dataset
 

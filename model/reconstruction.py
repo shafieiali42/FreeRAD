@@ -92,7 +92,7 @@ def create_Unet_model(
 
 class Reconstructor:
     def __init__(self, model_path, device='cpu'):
-        self.IMAGE_SIZE = 64
+        self.IMAGE_SIZE = 256
         self.device=device
         self.gd =create_gaussian_diffusion(
                     steps=1000,
@@ -198,6 +198,17 @@ class Reconstructor:
         anomaly_score=torch.max(torch.abs(error_ms-mean_training_error_ms).view(error_ms.shape[0],-1),dim=1)[0]
         return anomaly_score.tolist()
 
+    def myAnomalyScore(self,image,reconstructed):
+        image_arr=image.detach().cpu().numpy()
+        reconstructed_arr=reconstructed.detach().cpu().numpy()
+        image_arr=image_arr.astype("float64")
+        reconstructed_arr=reconstructed_arr.astype("float64")
+        err=(image_arr-reconstructed_arr)**2
+        sum_err=np.sum(err)
+        print(sum_err)
+        return sum_err
+
+
     def save_result(self,scores,labels,result_name):
         labels=np.array(labels)
         scores=np.array(scores)
@@ -216,18 +227,21 @@ class Reconstructor:
         plt.close()
 
 
-def plot_images(image1,image2,result_name):
-    f, axs = plt.subplots(1,2)
-    axs[0].imshow(image1)
-    axs[1].imshow(image2)
+def plot_images(image1_list,image2_list,result_name):
+    f, axs = plt.subplots(len(image1_list),2,figsize=(20,160))
+    for i in range(len(image1_list)):
+        axs[i,0].imshow(image1_list[i])
+        axs[i,1].imshow(image2_list[i])
     plt.savefig(f'{result_name}.png')
     plt.clf()
     plt.close()
 
+
+
     
 def main():
     BATCH_SIZE=1
-    IMAGE_SIZE=64
+    IMAGE_SIZE=256
     path="MVTecAD/carpet/test/metal_contamination/"
     entries = os.listdir(path=path)
     contamination=[path+image_name for image_name in entries]
@@ -248,13 +262,13 @@ def main():
     labels=contamination_label+cut_label+good_label
     test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE)
     test_data_loader=get_dataLoader(test_dataset,batch_size=BATCH_SIZE,shuffle=False)
-    original_test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE,transform=False)
-    original_test_data_loader=get_dataLoader(original_test_dataset,batch_size=BATCH_SIZE,shuffle=False)
+    # original_test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE,transform=False)
+    # original_test_data_loader=get_dataLoader(original_test_dataset,batch_size=BATCH_SIZE,shuffle=False)
     
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
-    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final215.pt",device=device)
+    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final216.pt",device=device)
     
     train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
     train_loader=get_dataLoader(train_dataset,BATCH_SIZE,False)
@@ -263,6 +277,9 @@ def main():
     mean_error_maps_of_traing=reconstructor.calc_error_ms_of_training_data(train_loader,t)
     anomaly_scores=[]
     anomaly_labels=[]
+    my_anomaly_score=[]
+    image1_list=[]
+    image2_list=[]
     for i,batch in enumerate(tqdm(test_data_loader)):
                 images,batch_labels=batch
                 images=images.to(device)
@@ -270,30 +287,32 @@ def main():
                 t=np.array([200 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
                 reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
-                # print("+"*500)
-                # print(reconstructed_images)
-                # print(reconstructed_images.max())
-                # print(reconstructed_images.min())
+                score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
+                my_score=reconstructor.myAnomalyScore(images,reconstructed_images)
+
+        
                 image1=(images+1)*0.5*255
                 image1[image1>255]=255
                 image1[image1<0]=0
-                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
+                image1=image1.detach().cpu().numpy()[0,:,:,:].reshape(256,256,3).astype("uint8")
                 image2=(reconstructed_images+1)*0.5*255
                 image2[image2>255]=255
                 image2[image2<0]=0
-                image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(64,64,3).astype("uint8")
-                # plt.imshow(image2)
-                # plt.savefig("image12.png")
-                # plt.clf()
-                # plot_images(original_test_dataset.__getitem__(i)[0].numpy().reshape(64,64,3).astype("uint8"),image2,f"result_{i}")
-                plot_images(image1,image2,f"result_{i}")
-            
-                score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
+                image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(256,256,3).astype("uint8")
+                image1_list.append(image1)
+                image2_list.append(image2)
+                # plot_images(image1,image2,f"result_{i}")
                 anomaly_scores=anomaly_scores+score
+                my_anomaly_score=my_anomaly_score+my_score
                 anomaly_labels=anomaly_labels+batch_labels.tolist()
     print(anomaly_scores)
     print(anomaly_labels)
+    plot_images(image1_list[:len(contamination)],image2_list[:len(contamination)],"Contamination")
+    plot_images(image1_list[len(contamination):len(contamination)+len(cut)],image2_list[len(contamination):len(contamination)+len(cut)],"Cut")
+    plot_images(image1_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],image2_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],"Good")
+    
     reconstructor.save_result(anomaly_scores,anomaly_labels,"Reconstruction_error")
+    reconstructor.save_result(my_anomaly_score,anomaly_labels,"MyReconstruction_error")
             
 
 
