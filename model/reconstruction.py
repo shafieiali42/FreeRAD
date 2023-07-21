@@ -140,7 +140,18 @@ class Reconstructor:
         reconstructed=self.gd.p_sample(self.model,noisy,t)
         return reconstructed
 
-    
+    def one_shot_reconstruct_with_noisy(self, x, t):
+      with torch.no_grad():            
+        # print(x.shape)
+        # print(x.max())
+        # print(x.min())
+        # print(t.shape)
+        # print(t)
+        # print("-"*500)
+        noisy=self.gd.q_sample(x,t)
+        reconstructed=self.gd.p_sample(self.model,noisy,t)
+        return reconstructed,noisy
+
 
     
     def calc_error_map(self,images,reconstructed_images,scale):
@@ -157,30 +168,15 @@ class Reconstructor:
     def calc_error_ms(self,images,reconstructed_images,filter_size=3):
         import torch.nn.functional as F
         scales=[1,0.5,0.25,0.125]
-        # error_maps=[]
         error_maps = torch.empty((len(scales), self.IMAGE_SIZE, self.IMAGE_SIZE),device=self.device)
         for i,scale in enumerate(scales):
             error_mp=self.calc_error_map(images.clone(),reconstructed_images.clone(),scale)
-            # error_maps.append(error_mp)
-            # print(scale)
-            # print(error_mp.shape)
             error_maps[i]=error_mp
-        # mean_err_map=torch.zeros_like(error_maps[0],device=self.device)
-        mean_err_map=torch.mean(error_maps,dim=0).to(self.device)
-        # for i in range(len(error_maps)):
-            # mean_err_map=mean_err_map+error_maps[i]/len(error_maps)
-        
-        # print(mean_err_map.shape)
+        mean_err_map=torch.mean(error_maps,dim=0).to(self.device) 
         mean_err_map = torch.unsqueeze(mean_err_map, dim=0)
         mean_kernel = torch.ones((1,1,filter_size, filter_size)) / (filter_size * filter_size)
         mean_kernel=mean_kernel.to(self.device)
-        # print(mean_err_map.shape)
-        # print(mean_kernel.shape)
         mean_err_map = F.conv2d(mean_err_map, mean_kernel, padding=filter_size // 2)
-        # print(mean_err_map.shape)
-        # mean_err_map=torch.squeeze(mean_err_map,dim=1)
-        # print(mean_err_map.shape)
-        # print("-"*100)
         return mean_err_map
 
     def calc_error_ms_of_training_data(self,train_loader,t):
@@ -227,19 +223,20 @@ class Reconstructor:
         plt.close()
 
 
-def plot_images(image1_list,image2_list,image3_list,result_name):
+def plot_images(image1_list,image2_list,diffused_list,image3_list,result_name):
     import cv2 as cv
-    f, axs = plt.subplots(len(image1_list),3,figsize=(20,160))
+    f, axs = plt.subplots(len(image1_list),4,figsize=(20,160))
     for i in range(len(image1_list)):
         # image3=np.abs(image1_list[i]-image2_list[i])
         # image3=cv.cvtColor(image3_list[i],cv.COLOR_RGB2GRAY)
         # cv.imwrite("gray.jpg",image3)
         image3=image3_list[i]
-        axs[i,0].imshow(image1_list[i])
-        axs[i,1].imshow(image2_list[i])
+        axs[i,0].imshow(image1_list[i][:,:,::-1])
+        axs[i,1].imshow(diffused_list[i][:,:,::-1])
+        axs[i,2].imshow(image2_list[i][:,:,::-1])
         print(image3.shape)
         print(f"---------{np.max(image3)},{np.min(image3)}")
-        axs[i,2].imshow(image3,cmap="gray")
+        axs[i,3].imshow(image3,cmap="gray")
     plt.savefig(f'{result_name}.png')
     plt.clf()
     plt.close()
@@ -250,24 +247,24 @@ def plot_images(image1_list,image2_list,image3_list,result_name):
 def main():
     BATCH_SIZE=1
     IMAGE_SIZE=256
-    path="MVTecAD/carpet/test/metal_contamination/"
+    path="MVTecAD/hazelnut/test/print/"
     entries = os.listdir(path=path)
-    contamination=[path+image_name for image_name in entries]
-    contamination_label=[1 for i in range(len(contamination))]
+    print_cat=[path+image_name for image_name in entries]
+    print_cat_label=[1 for i in range(len(print_cat))]
     
-    path="MVTecAD/carpet/test/cut/"
+    path="MVTecAD/hazelnut/test/crack/"
     entries = os.listdir(path=path)
-    cut=[path+image_name for image_name in entries]
-    cut_label=[1 for i in range(len(cut))]
+    crack=[path+image_name for image_name in entries]
+    crack_label=[1 for i in range(len(crack))]
     
     
-    path="MVTecAD/carpet/test/good/"
+    path="MVTecAD/hazelnut/test/good/"
     entries = os.listdir(path=path)
     good=[path+image_name for image_name in entries]
     good_label=[0 for i in range(len(good))]
     
-    image_paths=contamination+cut+good
-    labels=contamination_label+cut_label+good_label
+    image_paths=print_cat+crack+good
+    labels=print_cat_label+crack_label+good_label
     test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE)
     test_data_loader=get_dataLoader(test_dataset,batch_size=BATCH_SIZE,shuffle=False)
     # original_test_dataset=get_test_dataset(image_paths=image_paths,labels=labels,image_size=IMAGE_SIZE,transform=False)
@@ -276,9 +273,9 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
-    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/checkpoint_ep_final216.pt",device=device)
+    reconstructor=Reconstructor("../drive/MyDrive/FreeRAD/models/HazelnutCheckpoint_ep77.pt",device=device)
     
-    train_dataset=get_train_dataset("MVTecAD/carpet/train/good/",image_size=IMAGE_SIZE)
+    train_dataset=get_train_dataset("MVTecAD/hazelnut/train/good/",image_size=IMAGE_SIZE)
     train_loader=get_dataLoader(train_dataset,BATCH_SIZE,False)
     t=np.array([200 for i in range(BATCH_SIZE)])
     t = torch.from_numpy(t).long().to(device)            
@@ -289,13 +286,15 @@ def main():
     image1_list=[]
     image2_list=[]
     image3_list=[]
+    diffused_list=[]
     for i,batch in enumerate(tqdm(test_data_loader)):
                 images,batch_labels=batch
                 images=images.to(device)
                 batch_labels=batch_labels.to(device)
                 t=np.array([200 for i in range(len(batch_labels))])
                 t = torch.from_numpy(t).long().to(device)
-                reconstructed_images=reconstructor.one_shot_reconstruct(images,t)["pred_xstart"]
+                reconstructed_images,diffused_image=reconstructor.one_shot_reconstruct_with_noisy(images,t)
+                reconstructed_images=reconstructed_images["pred_xstart"]
                 score=reconstructor.anomaly_score_calculation(images,reconstructed_images,mean_error_maps_of_traing)
                 error_ms=reconstructor.calc_error_ms(images,reconstructed_images)
                 error_map=torch.abs(error_ms-mean_error_maps_of_traing)
@@ -313,6 +312,12 @@ def main():
                 image2[image2>255]=255
                 image2[image2<0]=0
                 image2=image2.detach().cpu().numpy()[0,:,:,:].reshape(256,256,3).astype("uint8")
+                
+                diffused=(diffused_image+1)*0.5*255
+                diffused[diffused>255]=255
+                diffused[diffused<0]=0
+                diffused=diffused.detach().cpu().numpy()[0,:,:,:].reshape(256,256,3).astype("uint8")
+                diffused_list.append(diffused)
                 image1_list.append(image1)
                 image2_list.append(image2)
                 # plot_images(image1,image2,f"result_{i}")
@@ -321,9 +326,24 @@ def main():
                 anomaly_labels=anomaly_labels+batch_labels.tolist()
     print(anomaly_scores)
     print(anomaly_labels)
-    plot_images(image1_list[:len(contamination)],image2_list[:len(contamination)],image3_list,"Contamination")
-    plot_images(image1_list[len(contamination):len(contamination)+len(cut)],image2_list[len(contamination):len(contamination)+len(cut)],image3_list,"Cut")
-    plot_images(image1_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],image2_list[len(contamination)+len(cut):len(contamination)+len(cut)+len(good)],image3_list,"Good")
+
+    plot_images(image1_list[:len(print_cat)],
+                image2_list[:len(print_cat)],
+                diffused_list[:len(print_cat)],
+                image3_list[:len(print_cat)],
+                "PrintHazelnut")
+    
+    plot_images(image1_list[len(print_cat):len(print_cat)+len(crack)],
+                image2_list[len(print_cat):len(print_cat)+len(crack)],
+                diffused_list[len(print_cat):len(print_cat)+len(crack)],
+                image3_list[len(print_cat):len(print_cat)+len(crack)],
+                "CrackHazelnut")
+    
+    plot_images(image1_list[len(print_cat)+len(crack):len(print_cat)+len(crack)+len(good)],
+                image2_list[len(print_cat)+len(crack):len(print_cat)+len(crack)+len(good)],
+                diffused_list[len(print_cat)+len(crack):len(print_cat)+len(crack)+len(good)],
+                image3_list[len(print_cat)+len(crack):len(print_cat)+len(crack)+len(good)],
+                "GoodHazelnut")
     
     reconstructor.save_result(anomaly_scores,anomaly_labels,"Reconstruction_error")
     reconstructor.save_result(my_anomaly_score,anomaly_labels,"MyReconstruction_error")

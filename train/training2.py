@@ -44,12 +44,12 @@ class TrainLoop:
         self.last_checkpoint=last_checkpoint
         self.step=0
         if resume_training:
-            checkpoint = th.load(base_model_path+f'checkpoint_ep{last_checkpoint}.pt')
+            checkpoint = th.load(base_model_path+f'HazelnutCheckpoint_ep{last_checkpoint}.pt')
             self.unet.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.step=checkpoint["step"]
             self.unet=self.unet.to(self.device)
-            self.optimizer=self.optimizer.to(device)
+            # self.optimizer=self.optimizer.to(device)
             print(self.step)
             # self.last_checkpoint = checkpoint['epoch']
             # loss = checkpoint['loss']
@@ -58,7 +58,7 @@ class TrainLoop:
     def run_loop(self):
         for epoch in range(self.last_checkpoint+1,self.num_epochs):
             if self.step>=30000:
-                th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'HazelnutCheckpoint_ep{epoch}.pt')
+                th.save({'epoch': epoch,'step':self.step,'model_state_dict': self.unet.state_dict(),'optimizer_state_dict': self.optimizer.state_dict(),'loss': epoch_loss,}, self.base_model_path+f'HazelnutFinalCheckpoint_ep{epoch}.pt')
                 break
             print(f"Epoch: {epoch}/{self.num_epochs}")
             train_loss=0
@@ -78,7 +78,7 @@ class TrainLoop:
                 # print(loss)
                 # print("-"*500)
                 self.optimizer.step()
-                self.ema.step_ema(self.ema_model, self.unet)
+                # self.ema.step_ema(self.ema_model, self.unet)
                 train_loss+=loss
                 iter_cnt+=1
                 if self.step%1000==0:
